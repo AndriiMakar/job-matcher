@@ -1,0 +1,12 @@
+arize-phoenix-otel
+arize-phoenix-client
+arize-phoenix-evals
+openinference-instrumentation-anthropic
+anthropic
+voyageai
+psycopg[binary]
+pgvector
+pandas
+scipy
+requests
+python-dotenv
