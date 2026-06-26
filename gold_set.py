@@ -1,3 +1,10 @@
+# Build the two Phoenix dataset views from gold_labels.csv.
+#
+# Idempotent: each dataset is fetched by name if it already exists, else created.
+# That matters because the eval scripts do `from gold_set import retrieval_ds`,
+# which re-runs this file — so re-running/importing must NOT try to re-create an
+# existing dataset. To make a *fresh* dataset (e.g. after re-labeling), bump the
+# "-v1" suffix in the names below to "-v2".
 import pandas as pd
 from phoenix.client import Client
 from dotenv import load_dotenv
@@ -14,17 +21,36 @@ retrieval_rows = (
     .apply(lambda s: [str(x) for x in s])
     .reset_index(name="relevant_job_ids")
 )
-retrieval_ds = px.datasets.create_dataset(
-    name="resume-retrieval-v1",
-    dataframe=retrieval_rows,
+
+
+def _create_or_get(name, dataframe, input_keys, output_keys):
+    """Fetch the dataset by name if it exists, else create it from the dataframe."""
+    try:
+        return px.datasets.get_dataset(dataset=name)        # exists → reuse it
+    except Exception:
+        return px.datasets.create_dataset(                  # first time → create it
+            name=name,
+            dataframe=dataframe,
+            input_keys=list(input_keys),
+            output_keys=list(output_keys),
+        )
+
+
+retrieval_ds = _create_or_get(
+    "resume-retrieval-v1",
+    retrieval_rows,
     input_keys=["resume_id", "resume_text"],
     output_keys=["relevant_job_ids"],
 )
 
 # --- View B: generation (one row per pair; expected = human_score/label) -------
-generation_ds = px.datasets.create_dataset(
-    name="resume-job-pairs-v1",
-    dataframe=labels,
+generation_ds = _create_or_get(
+    "resume-job-pairs-v1",
+    labels,
     input_keys=["resume_text", "job_text"],
     output_keys=["human_score", "label"],
 )
+
+
+if __name__ == "__main__":
+    print("Datasets ready in Phoenix: resume-retrieval-v1, resume-job-pairs-v1")

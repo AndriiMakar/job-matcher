@@ -8,5 +8,6 @@ psycopg[binary]
 pgvector
 pandas
 scipy
+scikit-learn
 requests
 python-dotenv
