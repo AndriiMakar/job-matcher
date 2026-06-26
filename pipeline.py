@@ -83,17 +83,40 @@ def rerank(resume_text: str, jobs: list[dict], top_n: int = 5) -> list[dict]:
 
 @tracer.chain
 def judge_match(resume_text: str, job_text: str) -> dict:
-    """Score a SINGLE (resume, job) pair."""
-    msg = anthropic_client.messages.create(
-        model=MATCH_MODEL, max_tokens=512,
-        messages=[{"role": "user", "content":
-            "Score how well this resume matches this job from 0-100, then justify in 2 sentences "
-            "citing ONLY skills present in the resume.\n\n"
-            f"RESUME:\n{resume_text}\n\nJOB:\n{job_text}\n\n"
-            'Respond as JSON: {"score": <int>, "rationale": "<text>"}'}],
-    )
+    """Score a SINGLE (resume, job) pair → {"score": int, "rationale": str}.
+
+    temperature=0 → deterministic, reproducible scoring. The rubric + band anchors
+    live in the prompt so the judge's numbers land on the same good/marginal/bad
+    scale the gold set was labeled with.
+    """
     import json
-    return json.loads(msg.content[0].text)
+    import re
+
+    rubric = (
+        "Scoring rubric — apply it strictly and score on THIS scale:\n"
+        "- 70-100 = good: right role AND seniority, must-have skills present, domain adjacent.\n"
+        "- 40-69 = marginal: partial fit — real overlap AND a real gap.\n"
+        "- 0-39 = bad: wrong role or wrong core stack.\n"
+        "Weigh role and seniority fit and must-have skills first; domain and location are secondary. "
+        "Tech-stack overlap does NOT rescue a fundamentally different role (e.g. a sales or non-eng role)."
+    )
+    msg = anthropic_client.messages.create(
+        model=MATCH_MODEL, max_tokens=512, temperature=0,
+        system="You are a precise hiring evaluator. Reply with ONLY a JSON object — no prose, no markdown.",
+        messages=[
+            {"role": "user", "content":
+                f"{rubric}\n\n"
+                "Score how well this RESUME matches this JOB from 0-100 using the rubric above, then justify "
+                "in 2 sentences citing ONLY skills present in the resume.\n\n"
+                f"RESUME:\n{resume_text}\n\nJOB:\n{job_text}\n\n"
+                'Respond as JSON: {"score": <int>, "rationale": "<text>"}'},
+        ],
+    )
+    text = msg.content[0].text
+    match = re.search(r"\{.*\}", text, re.DOTALL)
+    if not match:
+        raise ValueError(f"judge returned no JSON object: {text!r}")
+    return json.loads(match.group(0))
 
 
 @tracer.chain
