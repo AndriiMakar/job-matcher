@@ -8,5 +8,5 @@ __pycache__/
 .DS_Store
 
 
-gold_labels.csv
+/gold_labels.csv
 resumes_local.py
