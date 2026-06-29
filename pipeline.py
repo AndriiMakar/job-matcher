@@ -12,7 +12,7 @@ load_dotenv()  # pull DATABASE_URL + API keys from .env before anything reads th
 tracer_provider = register(
     project_name="job-matcher",
     auto_instrument=True,          # picks up the installed openinference-* instrumentors
-    endpoint=f"{os.environ['PHOENIX_COLLECTOR_ENDPOINT']}/v1/traces",
+    endpoint=f"{os.environ.get('PHOENIX_COLLECTOR_ENDPOINT', 'http://localhost:6006')}/v1/traces",
     batch=True,
 )
 tracer = tracer_provider.get_tracer(__name__)
