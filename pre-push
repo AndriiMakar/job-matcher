@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+# pre-push hook — run the eval gate locally before a push reaches CI.
+#
+# Install once (point git at this directory for hooks):
+#     git config core.hooksPath scripts/hooks
+#
+# Notes:
+#   - Fires on `git push` only (NOT on every commit) — the gate calls Claude, so it
+#     costs a few cents and a few seconds; that's fine per-push, not per-commit.
+#   - Run pushes from your activated project venv so `python` resolves to it.
+#   - Skips gracefully if the test DB isn't up (CI still gates the PR).
+#   - Override a failing gate with:  git push --no-verify
+set -uo pipefail
+
+TEST_DB="${TEST_DB:-postgresql://postgres:postgres@localhost:5433/jobmatcher_test}"
+
+# If the test DB isn't reachable (Postgres down, not seeded, or wrong Python), skip — don't
+# block the push over local infra. CI will still run the same gate on the PR.
+if ! DATABASE_URL="$TEST_DB" python -c \
+      "import os, psycopg; psycopg.connect(os.environ['DATABASE_URL']).close()" 2>/dev/null; then
+    echo "pre-push: test DB unreachable — skipping local eval gate (CI will still run it)."
+    exit 0
+fi
+
+echo "pre-push: running eval gate against the test DB…"
+DATABASE_URL="$TEST_DB" GOLD_LABELS=tests/fixtures/gold_labels.csv python -m pytest tests/ -q
+if [ $? -ne 0 ]; then
+    echo "pre-push: eval gate FAILED — push aborted. Fix it, or override with 'git push --no-verify'."
+    exit 1
+fi
+
+echo "pre-push: eval gate passed."
+exit 0
