@@ -37,7 +37,7 @@ def _create_or_get(name, dataframe, input_keys, output_keys):
 
 
 retrieval_ds = _create_or_get(
-    "resume-retrieval-v1",
+    "resume-retrieval-v2",
     retrieval_rows,
     input_keys=["resume_id", "resume_text"],
     output_keys=["relevant_job_ids"],
@@ -45,7 +45,7 @@ retrieval_ds = _create_or_get(
 
 # --- View B: generation (one row per pair; expected = human_score/label) -------
 generation_ds = _create_or_get(
-    "resume-job-pairs-v1",
+    "resume-job-pairs-v2",
     labels,
     input_keys=["resume_text", "job_text"],
     output_keys=["human_score", "label"],
@@ -53,4 +53,4 @@ generation_ds = _create_or_get(
 
 
 if __name__ == "__main__":
-    print("Datasets ready in Phoenix: resume-retrieval-v1, resume-job-pairs-v1")
+    print("Datasets ready in Phoenix: resume-retrieval-v2, resume-job-pairs-v2")
