@@ -2,7 +2,7 @@ arize-phoenix-otel
 arize-phoenix-client
 arize-phoenix-evals
 openinference-instrumentation-anthropic
-anthropic
+anthropic==0.111.0
 voyageai
 psycopg[binary]
 pgvector
