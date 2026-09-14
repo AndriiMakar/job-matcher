@@ -189,7 +189,7 @@ the repo. The `gold_labels.csv` under `tests/fixtures/` is synthetic and committ
 
 ---
 
-## Tech stack
+## Tech stack:
 
 <ol>
 <li>Python</li>
